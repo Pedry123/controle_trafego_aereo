@@ -63,23 +63,54 @@ void apagaFila(fila *f) {
     f->fim = NULL;
 }
 
-void converteTempo(int n) {
-    int hora_inteira;
-    float horas, minutos;
-    n *= 15;
-    hora_inteira = n / 60;
-    horas = n / 60.0;
-    minutos = (horas - hora_inteira) * 60;
-    if (minutos == 0) {
-        printf("%.f:00\n", horas);
+char* converteTempo(int n) {
+    int minutos = n * 15;
+    int horas = minutos / 60;
+    minutos = minutos % 60;
+
+    char* tempoConvertido = malloc(6 * sizeof(char));
+    sprintf(tempoConvertido, "%02d:%02d", horas, minutos);
+    return tempoConvertido;
+}
+
+char* condicao(aviao *x, int n) { //atrasado, adiantado ou normal
+    if (x->tempo < n) {
+        return "atrasado";
+    } else if (x->tempo > n) {
+        return "adiantado";
     } else {
-        printf("%.f:%.f\n", horas, minutos);
+        return "como previsto";
     }
 }
 
+// funcoes auxiliares
+
+int verificarPistaLivre(int pista) {
+    if (pista == 1) {
+        return filaVazia(pista1);
+    } else if (pista == 2) {
+        return filaVazia(pista2);
+    }
+    return 0;
+}
+
+int trocarPista(int pista) {
+    if (pista == 1 && verificarPistaLivre(2)) {
+        return 2;
+    } else if (pista == 2 && verificarPistaLivre(1)) {
+        return 1;
+    }
+    return pista;
+}
+
 void solicitaPouso(fila *pista, int id, int n) {
-    enfileira(pista, id, n + 1, 1 + rand() % 8);
-    printf("Solicitacao de pouso do voo %d\n", id);
+    int pistaEscolhida = trocarPista(pista == pista1 ? 1 : 2);
+    if (pistaEscolhida != 1 && pistaEscolhida != 2) {
+        printf("Tempo %02d: Aviao %d (previsto para pousar %s) aguardando pista\n", n, id, converteTempo(n));
+    } else {
+        enfileira(pistaEscolhida == 1 ? pista1 : pista2, id, n + 1, 1 + rand() % 8);
+        printf("Solicitacao de pouso do voo %d na pista %d\n", id, pistaEscolhida);
+    }
 }
 
 void pousar(fila *pista, int tempoAtual) {
@@ -90,14 +121,15 @@ void pousar(fila *pista, int tempoAtual) {
             if (x == pista->fim) {
                 pista->fim = pista->inicio;
             }
-            printf("Tempo %02d: Aviao %d [%d] pousando na pista %d\n", tempoAtual, x->id, x->tempo, pista == pista1 ? 1 : 2);
+
+            printf("Tempo %02d: Aviao %d (previsto para pousar %s) pousando na pista %d %s\n", tempoAtual, x->id, converteTempo(x->tempo), pista == pista1 ? 1 : 2, condicao(x, tempoAtual));
             free(x);
         }
     }
 }
 
 void solicitaDecolagem(fila *pista, int id, int n) {
-    enfileira(pista, id, n + 1, 1 + rand() % 8);
+    enfileira(pista, id, n + 3, 1 + rand() % 8);
     printf("Solicitacao de decolagem do voo %d\n", id);
 }
 
@@ -109,7 +141,7 @@ void decolar(fila *pista, int tempoAtual) {
             if (x == pista->fim) {
                 pista->fim = pista->inicio;
             }
-            printf("Tempo %02d: Aviao %d [%d] decolando na pista 3\n", tempoAtual, x->id, x->tempo);
+            printf("Tempo %02d: Aviao %d (previsto para decolar %s) decolando na pista 3 %s\n", tempoAtual, x->id, converteTempo(x->tempo), condicao(x, tempoAtual));
             free(x);
         }
     }
@@ -125,11 +157,11 @@ int main() {
     criaFilaVazia(pista3);
 
     int tempoAtual = 0;
-    for (int i = 0; i < 15; i++) {
-        converteTempo(tempoAtual);
+    for (int i = 0; i < 96; i++) {
+        printf("%s\n", converteTempo(tempoAtual));
 
         // Gerar solicitações de pouso e decolagem aleatoriamente
-        for (int i = 0; i < rand() % 4; i++) {
+        for (int i = 0; i < rand() % 5; i++) {
             if (rand() % 2 == 0) {
                 int id = 2 * (rand() % 250);
                 solicitaPouso(pista1, id, tempoAtual);
@@ -137,18 +169,21 @@ int main() {
                 int id = 2 * (rand() % 250);
                 solicitaPouso(pista2, id, tempoAtual);
             }
-
+        }
+        for (int i = 0; i < rand() % 4; i++) {
             if (rand() % 2 == 0) {
                 int id = 2 * (rand() % 250) + 1;
                 solicitaDecolagem(pista3, id, tempoAtual);
             }
         }
+        
 
         pousar(pista1, tempoAtual);
         pousar(pista2, tempoAtual);
         decolar(pista3, tempoAtual);
 
         tempoAtual++;
+        printf("\n\n");
     }
 
     apagaFila(pista1);

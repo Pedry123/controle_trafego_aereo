@@ -4,7 +4,7 @@
 
 int n = 0;
 
-typedef struct {
+typedef struct aviao {
     int id;
     int tempo;
     int combustivel;
